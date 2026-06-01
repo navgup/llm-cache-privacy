@@ -1,0 +1,2 @@
+- [Deployment is Docker](deployment-docker.md) — run SGLang via lmsysorg/sglang image, never pip/uv (L4 sm89 kernel mismatch)
+- [GCP VM instance](gcp-vm-instance.md) — instance-clone-v2 / us-central1-a, L4, ~44GB free, repo at ~/cs281-final

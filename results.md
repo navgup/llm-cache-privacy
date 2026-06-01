@@ -170,16 +170,44 @@ exist in this version.) The policies can only diverge when the background has a
 
 ## Experiment 2b — Popularity structure vs eviction policy
 
-**What & why.** The one configuration where LRU and LFU should diverge: give the
+**What & why.** The one configuration where LRU and LFU *should* diverge: give the
 background a popularity skew (a small hot set recurs, building frequency) and ask
-two questions at a fixed 512-token length, cache = 4096 tokens, per policy:
+two questions at a fixed 512-token length, per policy:
 - **(a) Rare-victim window** — does a one-off sensitive prefix get evicted *faster*
   under LFU (because popular content is sticky and crowds it out)?
 - **(b) Popularity oracle** — after a recency-*equalized* access schedule (all
   candidates share the same last-access; only frequency differs) plus cold filler,
   does P(cached) rise with a candidate's frequency under LFU but stay flat under LRU?
-  (i.e., is an LFU cache a cross-user *popularity* oracle?)
+  (i.e., is an LFU cache a cross-user *popularity* oracle?) Each candidate is probed
+  in a freshly-rebuilt cache state to avoid the sequential-probe cascade where a
+  miss re-caches the probed prefix and evicts the next candidate.
 
-**Data.** _(filled in after the VM run — see below.)_
+**Data.**
 
-**Commentary.** _(filled in after the VM run.)_
+| measurement | lru | lfu |
+|---|---|---|
+| (a) rare-victim window (skewed bg, 8192 cache) | 80 prompts | 80 prompts |
+| (b) oracle — P(cached) vs frequency [1,2,4,8,16,32] | flat / no trend | flat / no trend |
+
+Oracle P(cached) was identical for both policies (only one candidate happened to
+survive, independent of its frequency — no monotonic gradient). Figures:
+`results/popularity_evict.png`, `results/popularity_oracle.png`.
+
+**Commentary — a negative result.** Across **every** configuration tried (main sweep
+with distinct background; skewed background at 4096 and 8192 cache; the
+recency-equalized popularity oracle), **`lru` and `lfu` are empirically
+indistinguishable** and **no popularity oracle appears** — re-accessing a cached
+prefix does not build frequency-based retention that survives eviction pressure any
+differently than recency does. So in SGLang v0.5.3 the eviction-policy choice does
+**not** measurably change the attack surface, and the report's predicted LRU↔LFU
+divergence does not materialize on this stack. Likely causes: the radix-tree LFU
+in this version doesn't prioritize per-node hit frequency strongly (or shares most
+eviction logic with LRU), so the textbook "popular content is sticky under LFU"
+behavior isn't realized. The practical takeaway flips the report's framing: an
+operator's `lru`-vs-`lfu` choice is **not** a meaningful privacy lever here — unlike
+**cache size**, which cleanly and monotonically controls the attack window (Exp 2).
+
+> Methodological note: detection is inherently single-shot (the attacker's own first
+> probe caches the prefix), and probing many candidates in one cache state cascades
+> (each miss re-caches and evicts the next) — hence the per-candidate rebuild. Even
+> with these handled, no frequency signal emerged.

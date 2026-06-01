@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Environment / secrets
+.env
+
+# Data and results (large / regenerated)
+data/raw/
+data/processed/
+results/
+
+# OS / editor
+.DS_Store

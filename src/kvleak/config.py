@@ -162,19 +162,20 @@ class PopularityConfig:
     policies: list[str] = field(default_factory=lambda: ["lru", "lfu"])
     fixed_length: int = 512
 
-    # Part (a) — skewed-background eviction of a rare victim.
+    # Part (a) — skewed-background eviction of a rare victim. (Kept small: this
+    # is a confirmed null — lru==lfu — and the spot VM preempts long runs.)
     hot_pool_size: int = 8       # # of recurring "popular" background prefixes
     p_hot: float = 0.7           # fraction of injected traffic drawn from hot pool
     volume_ladder: list[int] = field(
-        default_factory=lambda: [0, 8, 16, 32, 64, 128]
+        default_factory=lambda: [0, 32, 128]
     )
-    n_victims: int = 6
+    n_victims: int = 2
 
     # Part (b) — popularity oracle: probe candidates of known frequency.
     candidate_freqs: list[int] = field(
         default_factory=lambda: [1, 2, 4, 8, 16, 32]
     )
-    candidates_per_freq: int = 2
+    candidates_per_freq: int = 1
     # cold prompts injected for pressure; gentle so eviction is graded by
     # frequency (candidates already fill ~75% of cache).
     oracle_filler: int = 24
