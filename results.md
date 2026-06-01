@@ -62,6 +62,8 @@ straight at a length-dependent crossover, motivating Experiment 1b.
 
 ## Experiment 1b — Prefix-length crossover sweep
 
+**Note** This is not really related to any privacy thing, just something to note b/c in milestone we assumed TTFT is always faster for cached 
+
 **What & why.** If a hit is slower for short prefixes, where does the sign flip?
 We build long medical contexts (concatenated MedQA stems), truncate each to a
 length ladder (32–4096 tokens), and measure cold vs warm TTFT at each length
