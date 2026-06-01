@@ -1,0 +1,88 @@
+# Experiment 1 (baseline attack) configuration.
+# Loaded by kvleak.config.load_config into an ExperimentConfig.
+seed: 1234
+
+server:
+  model_path: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  host: 127.0.0.1
+  port: 30000
+  page_size: 1            # token-level matching so short-prefix buckets register hits
+  attention_backend: flashinfer
+  mem_fraction_static: null   # auto-size the KV pool from free L4 memory
+  max_total_tokens: null
+  disable_radix_cache: false  # set true for the hard-uncached control run
+  radix_eviction_policy: lru
+  startup_timeout_s: 600.0
+  extra_args: []
+  # Docker deployment (L4 runs SGLang in a container). Set docker_image: null
+  # to fall back to a local `python -m sglang.launch_server` process.
+  docker_image: lmsysorg/sglang:v0.5.3-cu129
+  container_name: sglang-kvleak
+  shm_size: 16g
+  hf_cache_dir: ~/.cache/huggingface
+
+data:
+  tokenizer: meta-llama/Llama-3.1-8B-Instruct
+  medqa_dataset: GBaker/MedQA-USMLE-4-options
+  medqa_split: test
+  n_probes: 500
+  buckets:
+    short: [32, 64]
+    medium: [64, 128]
+    long: [128, 256]
+  sensitivity_window: 128
+  sensitive_terms:
+    - diagnosis
+    - diagnosed
+    - medication
+    - prescribed
+    - treatment
+    - symptoms
+    - disease
+    - cancer
+    - tumor
+    - infection
+    - therapy
+    - dose
+    - mg
+    - patient presents
+    - history of
+  # Background corpus: Open-Orca/OpenOrca (open) stands in for LMSYS-Chat-1M,
+  # whose gated parquet trips a datasets load bug. Loader auto-detects the field.
+  lmsys_dataset: Open-Orca/OpenOrca
+  lmsys_split: train
+  lmsys_min_tokens: 32
+  lmsys_max_prompts: 10000
+
+analysis:
+  calib_frac: 0.20
+  target_recall: 0.80
+
+# Prefix-length crossover sweep (find where ΔTTFT flips sign). Long prefixes are
+# built by concatenating MedQA stems and truncating to each length.
+length_sweep:
+  lengths: [32, 64, 128, 256, 512, 768, 1024, 1536, 2048, 3072, 4096]
+  n_base_texts: 20
+  repeats: 2
+
+# Phase 4: rerun the probe protocol under concurrent LMSYS background load.
+background:
+  rates: [0.5, 1.0, 2.0]      # x the base rate (mean inter-arrival = base_gap / rate)
+  base_mean_gap_s: 1.8
+  n_probes: 150               # MedQA subset per rate
+  warmup_s: 5.0
+
+# Experiment 2: eviction-policy + cache-size attack-surface sweep (fixed length,
+# eviction measured as background volume to evict a cached victim prefix).
+sweep:
+  fixed_length: 512
+  eviction_policies: [lru, lfu, fifo]
+  policy_cache_tokens: 4096
+  cache_sizes: [2048, 4096, 8192]
+  size_policy: lru
+  volume_ladder: [0, 4, 8, 16, 32, 64, 128]
+  n_victims: 6
+
+data_dir: data
+results_dir: results

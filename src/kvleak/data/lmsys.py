@@ -17,19 +17,32 @@ from __future__ import annotations
 import argparse
 import json
 
-from ..config import ExperimentConfig, load_config
+from ..config import ExperimentConfig, hf_token, load_config
 from .tokenize_utils import count_tokens, get_tokenizer, normalize
 
 
-def _first_user_message(conversation) -> str | None:
-    """Extract the first user turn from an LMSYS conversation field."""
-    if not isinstance(conversation, list):
-        return None
-    for turn in conversation:
-        if isinstance(turn, dict) and turn.get("role") == "user":
-            content = turn.get("content")
-            if isinstance(content, str) and content.strip():
-                return content
+def _extract_prompt(row: dict) -> str | None:
+    """Extract a user prompt from a background-corpus row, schema-agnostically.
+
+    Handles LMSYS-Chat-1M (``conversation`` turns), OpenOrca (``question``),
+    Alpaca-style (``instruction`` [+ ``input``]), and a plain ``text`` field.
+    """
+    # LMSYS: first user turn of the conversation.
+    conv = row.get("conversation")
+    if isinstance(conv, list):
+        for turn in conv:
+            if isinstance(turn, dict) and turn.get("role") == "user":
+                c = turn.get("content")
+                if isinstance(c, str) and c.strip():
+                    return c
+    # OpenOrca / generic single-field schemas.
+    for key in ("question", "instruction", "prompt", "text"):
+        v = row.get(key)
+        if isinstance(v, str) and v.strip():
+            extra = row.get("input")
+            if key == "instruction" and isinstance(extra, str) and extra.strip():
+                return f"{v}\n{extra}"
+            return v
     return None
 
 
@@ -40,13 +53,17 @@ def extract_background(cfg: ExperimentConfig) -> list[dict]:
     tokenizer = get_tokenizer(dcfg.tokenizer)
 
     # Stream to avoid materializing all of LMSYS-Chat-1M (~1M convos) on disk.
-    ds = load_dataset(dcfg.lmsys_dataset, split=dcfg.lmsys_split, streaming=True)
+    # Pass the token explicitly — the gated dataset needs it even with HF_TOKEN
+    # in the env (unlike the tokenizer path).
+    ds = load_dataset(
+        dcfg.lmsys_dataset, split=dcfg.lmsys_split, streaming=True, token=hf_token()
+    )
 
     prompts: list[dict] = []
     for i, row in enumerate(ds):
         if len(prompts) >= dcfg.lmsys_max_prompts:
             break
-        msg = _first_user_message(row.get("conversation"))
+        msg = _extract_prompt(row)
         if msg is None:
             continue
         text = normalize(msg)

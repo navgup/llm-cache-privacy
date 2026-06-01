@@ -38,9 +38,20 @@ class ServerConfig:
     # Extra raw args appended verbatim to the launch command.
     extra_args: list[str] = field(default_factory=list)
 
+    # --- Docker deployment (the L4 runs SGLang in a container, not via pip) ---
+    # If set, the server is launched as a Docker container; if None, launched as
+    # a local `python -m sglang.launch_server` process (rarely used now).
+    docker_image: str | None = "lmsysorg/sglang:v0.5.3-cu129"
+    container_name: str = "sglang-kvleak"
+    shm_size: str = "16g"
+    # Host HuggingFace cache, bind-mounted into the container so weights persist
+    # across container restarts (~ expands to the invoking user's home).
+    hf_cache_dir: str = "~/.cache/huggingface"
+
     @property
     def base_url(self) -> str:
-        return f"http://{self.host}:{self.port}"
+        # Always connect over the loopback published port from the host.
+        return f"http://127.0.0.1:{self.port}"
 
 
 @dataclass
@@ -86,11 +97,15 @@ class DataConfig:
         ]
     )
 
-    # LMSYS background corpus (prepared now; consumed by Phase-4 replay later).
-    lmsys_dataset: str = "lmsys/lmsys-chat-1m"
+    # Background-traffic corpus (diverse real user prompts that create cache
+    # pressure + concurrency jitter). LMSYS-Chat-1M is the report's choice but its
+    # gated parquet trips a datasets-library load bug; Open-Orca/OpenOrca is an
+    # open, diverse stand-in. The loader auto-detects the prompt field, so either
+    # works — set lmsys_dataset back to lmsys/lmsys-chat-1m if access is resolved.
+    lmsys_dataset: str = "Open-Orca/OpenOrca"
     lmsys_split: str = "train"
     lmsys_min_tokens: int = 32
-    lmsys_max_prompts: int = 50000  # cap how many to materialize locally
+    lmsys_max_prompts: int = 10000  # enough for the sweep (~8k) + Phase-4 replay
 
 
 @dataclass
@@ -102,11 +117,65 @@ class AnalysisConfig:
 
 
 @dataclass
+class BackgroundExpConfig:
+    """Phase 4: rerun the probe protocol under concurrent LMSYS background load."""
+
+    rates: list[float] = field(default_factory=lambda: [0.5, 1.0, 2.0])
+    base_mean_gap_s: float = 1.8  # observed LMSYS mean inter-arrival at 1x load
+    n_probes: int = 150  # subsample of MedQA probes per rate (keeps runtime sane)
+    warmup_s: float = 5.0  # let the replayer ramp before probing
+
+
+@dataclass
+class SweepConfig:
+    """Experiment 2: eviction-policy + cache-size attack-surface sweep.
+
+    The attack window is measured as background *volume*: how many injected LMSYS
+    background prompts it takes to evict a freshly-cached victim prefix. Cache
+    size (``--max-total-tokens``) and eviction policy are what control this.
+    """
+
+    fixed_length: int = 512  # past the ~259-token crossover; clean classic signal
+    eviction_policies: list[str] = field(
+        default_factory=lambda: ["lru", "lfu", "fifo"]
+    )
+    policy_cache_tokens: int = 4096  # max_total_tokens used for the policy sweep
+    cache_sizes: list[int] = field(default_factory=lambda: [2048, 4096, 8192])
+    size_policy: str = "lru"  # eviction policy used for the cache-size sweep
+    # Background volume ladder: # of distinct background prompts injected after
+    # the victim is cached, before the single attacker probe.
+    volume_ladder: list[int] = field(
+        default_factory=lambda: [0, 4, 8, 16, 32, 64, 128]
+    )
+    n_victims: int = 6  # distinct victim prefixes per (config, volume)
+
+
+@dataclass
+class LengthSweepConfig:
+    """Controlled prefix-length sweep to locate the ΔTTFT sign crossover.
+
+    Long prefixes are built by concatenating MedQA stems (a long sensitive
+    medical context) and truncating to each ladder length.
+    """
+
+    lengths: list[int] = field(
+        default_factory=lambda: [
+            32, 64, 128, 256, 512, 768, 1024, 1536, 2048, 3072, 4096,
+        ]
+    )
+    n_base_texts: int = 20  # independent long contexts (content diversity)
+    repeats: int = 2  # cold/warm pairs per (base_text, length)
+
+
+@dataclass
 class ExperimentConfig:
     seed: int = 1234
     server: ServerConfig = field(default_factory=ServerConfig)
     data: DataConfig = field(default_factory=DataConfig)
     analysis: AnalysisConfig = field(default_factory=AnalysisConfig)
+    length_sweep: LengthSweepConfig = field(default_factory=LengthSweepConfig)
+    background: BackgroundExpConfig = field(default_factory=BackgroundExpConfig)
+    sweep: SweepConfig = field(default_factory=SweepConfig)
 
     # Paths (relative entries are resolved against the repo root).
     data_dir: str = "data"
@@ -131,6 +200,10 @@ class ExperimentConfig:
     @property
     def lmsys_background_file(self) -> Path:
         return self.processed_dir / "lmsys_background.jsonl"
+
+    @property
+    def length_prefixes_file(self) -> Path:
+        return self.processed_dir / "length_prefixes.jsonl"
 
 
 def _resolve(p: str | Path) -> Path:

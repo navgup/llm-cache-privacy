@@ -11,20 +11,17 @@ dependencies = [
     "pandas>=2.1",
     "matplotlib>=3.8",
     "datasets>=2.18",
-    "transformers>=4.43",
+    "transformers>=4.43,<4.47",
     "httpx>=0.27",
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
     "tqdm>=4.66",
 ]
 
-[project.optional-dependencies]
-# GPU-only: installed on the L4 VM, NOT on the Mac. Pulls torch + flashinfer (CUDA).
-#   VM:  uv sync --extra gpu
-#   Mac: uv sync            (base deps only; data + analysis + tests run here)
-gpu = [
-    "sglang[all]>=0.4.0",
-]
+# NOTE: SGLang runs in Docker (lmsysorg/sglang image), NOT as a Python dep.
+# The attack client/data/analysis code only needs the base deps above and talks
+# to the server over HTTP. There is no GPU/torch dependency here — the same
+# `uv sync` works on the Mac and on the VM. See scripts/launch_server.sh.
 
 [dependency-groups]
 dev = [

@@ -18,7 +18,12 @@ import numpy as np  # noqa: E402
 from sklearn.metrics import roc_curve  # noqa: E402
 
 from ..config import load_config  # noqa: E402
-from .metrics import _labels_to_int, load_records  # noqa: E402
+from .metrics import (  # noqa: E402
+    detect_direction,
+    labels_to_int,
+    load_records,
+    oriented_score,
+)
 
 
 def plot_ttft_hist(ttft: np.ndarray, y: np.ndarray, out: Path) -> None:
@@ -36,7 +41,9 @@ def plot_ttft_hist(ttft: np.ndarray, y: np.ndarray, out: Path) -> None:
 
 
 def plot_roc(ttft: np.ndarray, y: np.ndarray, out: Path) -> None:
-    fpr, tpr, _ = roc_curve(y, -ttft)  # lower ttft => more hit-like
+    # Orient by the learned signal direction (hit may be slower or faster).
+    direction = detect_direction(ttft, y)
+    fpr, tpr, _ = roc_curve(y, oriented_score(ttft, direction))
     fig, ax = plt.subplots(figsize=(5, 5))
     ax.plot(fpr, tpr, color="tab:blue", lw=2)
     ax.plot([0, 1], [0, 1], "--", color="gray", lw=1)
@@ -58,7 +65,7 @@ def main() -> None:
     raw_path = Path(args.raw) if args.raw else cfg.results_path / "baseline_raw.jsonl"
     records = load_records(raw_path)
     ttft = np.array([r["ttft_ms"] for r in records], dtype=float)
-    y = _labels_to_int([r["label"] for r in records])
+    y = labels_to_int([r["label"] for r in records])
 
     cfg.results_path.mkdir(parents=True, exist_ok=True)
     hist_out = cfg.results_path / "ttft_hist.png"

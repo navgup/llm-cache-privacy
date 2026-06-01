@@ -9,9 +9,11 @@ tries to load the model.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -19,18 +21,17 @@ import httpx
 from .config import ServerConfig
 
 
-def build_launch_args(cfg: ServerConfig) -> list[str]:
-    """Construct the ``sglang.launch_server`` argv from config."""
+def sglang_args(cfg: ServerConfig, host: str) -> list[str]:
+    """The ``sglang.launch_server`` flags (single source of truth for both
+    local and Docker launches). ``host`` differs: 127.0.0.1 for a local
+    process, 0.0.0.0 inside a container so the published port is reachable."""
     args = [
-        sys.executable,
-        "-m",
-        "sglang.launch_server",
         "--model-path",
         cfg.model_path,
         "--dtype",
         cfg.dtype,
         "--host",
-        cfg.host,
+        host,
         "--port",
         str(cfg.port),
         "--page-size",
@@ -48,6 +49,48 @@ def build_launch_args(cfg: ServerConfig) -> list[str]:
         args += ["--disable-radix-cache"]
     args += list(cfg.extra_args)
     return args
+
+
+def build_local_command(cfg: ServerConfig) -> list[str]:
+    """Full argv to launch SGLang as a local Python process."""
+    return [sys.executable, "-m", "sglang.launch_server", *sglang_args(cfg, cfg.host)]
+
+
+def build_docker_command(cfg: ServerConfig) -> list[str]:
+    """Full argv (starting with ``docker``) to launch SGLang in a container.
+
+    Binds the host HF cache so weights persist, publishes the port on loopback,
+    and passes HF_TOKEN through from the environment (no token in the argv).
+    """
+    hf_cache = str(Path(os.path.expanduser(cfg.hf_cache_dir)))
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--gpus",
+        "all",
+        "--name",
+        cfg.container_name,
+        "--shm-size",
+        cfg.shm_size,
+        "-p",
+        f"127.0.0.1:{cfg.port}:{cfg.port}",
+        "-v",
+        f"{hf_cache}:/root/.cache/huggingface",
+        "-e",
+        "HF_TOKEN",  # value inherited from the host environment
+        cfg.docker_image,
+        "python3",
+        "-m",
+        "sglang.launch_server",
+        *sglang_args(cfg, "0.0.0.0"),
+    ]
+    return cmd
+
+
+def build_launch_command(cfg: ServerConfig) -> list[str]:
+    """Pick Docker or local launch based on config."""
+    return build_docker_command(cfg) if cfg.docker_image else build_local_command(cfg)
 
 
 class SGLangServer:
@@ -71,7 +114,7 @@ class SGLangServer:
         """Spawn the server and block until ``/health`` returns 200."""
         if self.proc is not None:
             raise RuntimeError("server already started")
-        args = build_launch_args(self.cfg)
+        args = build_launch_command(self.cfg)
         self.proc = subprocess.Popen(args)
         self._wait_until_healthy()
 
@@ -94,6 +137,14 @@ class SGLangServer:
         )
 
     def stop(self) -> None:
+        # For a container, `docker stop` is the reliable teardown (`--rm` cleans
+        # it up); terminating the `docker run` client alone can orphan it.
+        if self.cfg.docker_image is not None:
+            subprocess.run(
+                ["docker", "stop", self.cfg.container_name],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         if self.proc is not None:
             self.proc.terminate()
             try:
@@ -119,9 +170,17 @@ class SGLangServer:
         r.raise_for_status()
 
     def server_info(self) -> dict[str, Any]:
-        r = self._client.get("/server_info")
-        r.raise_for_status()
-        return r.json()
+        """Best-effort server info. The endpoint name varies across SGLang
+        versions (and may be absent), so this never raises — returns {} if no
+        known endpoint responds 200."""
+        for path in ("/get_server_info", "/server_info"):
+            try:
+                r = self._client.get(path)
+                if r.status_code == 200:
+                    return r.json()
+            except httpx.HTTPError:
+                pass
+        return {}
 
     def model_info(self) -> dict[str, Any]:
         r = self._client.get("/get_model_info")
