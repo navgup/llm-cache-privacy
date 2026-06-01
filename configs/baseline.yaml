@@ -77,7 +77,7 @@ background:
 # eviction measured as background volume to evict a cached victim prefix).
 sweep:
   fixed_length: 512
-  eviction_policies: [lru, lfu, fifo]
+  eviction_policies: [lru, lfu]   # SGLang v0.5.3 only ships lru + lfu
   policy_cache_tokens: 4096
   cache_sizes: [2048, 4096, 8192]
   size_policy: lru

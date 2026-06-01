@@ -136,9 +136,9 @@ class SweepConfig:
     """
 
     fixed_length: int = 512  # past the ~259-token crossover; clean classic signal
-    eviction_policies: list[str] = field(
-        default_factory=lambda: ["lru", "lfu", "fifo"]
-    )
+    # SGLang v0.5.3 only ships lru and lfu (the report's fifo/mru/filo/priority
+    # are not available in this version's --radix-eviction-policy).
+    eviction_policies: list[str] = field(default_factory=lambda: ["lru", "lfu"])
     policy_cache_tokens: int = 4096  # max_total_tokens used for the policy sweep
     cache_sizes: list[int] = field(default_factory=lambda: [2048, 4096, 8192])
     size_policy: str = "lru"  # eviction policy used for the cache-size sweep
@@ -148,6 +148,36 @@ class SweepConfig:
         default_factory=lambda: [0, 4, 8, 16, 32, 64, 128]
     )
     n_victims: int = 6  # distinct victim prefixes per (config, volume)
+
+
+@dataclass
+class PopularityConfig:
+    """Experiment 2b: how cache *popularity structure* interacts with the eviction
+    policy. Unlike the main sweep (all background distinct, frequency 1), here the
+    background has a popularity skew so LFU and LRU can diverge."""
+
+    # 8192 so all oracle candidates (12 x 512 tok = 6144) co-reside while their
+    # frequencies are built; filler then applies graded eviction pressure.
+    cache_tokens: int = 8192
+    policies: list[str] = field(default_factory=lambda: ["lru", "lfu"])
+    fixed_length: int = 512
+
+    # Part (a) — skewed-background eviction of a rare victim.
+    hot_pool_size: int = 8       # # of recurring "popular" background prefixes
+    p_hot: float = 0.7           # fraction of injected traffic drawn from hot pool
+    volume_ladder: list[int] = field(
+        default_factory=lambda: [0, 8, 16, 32, 64, 128]
+    )
+    n_victims: int = 6
+
+    # Part (b) — popularity oracle: probe candidates of known frequency.
+    candidate_freqs: list[int] = field(
+        default_factory=lambda: [1, 2, 4, 8, 16, 32]
+    )
+    candidates_per_freq: int = 2
+    # cold prompts injected for pressure; gentle so eviction is graded by
+    # frequency (candidates already fill ~75% of cache).
+    oracle_filler: int = 24
 
 
 @dataclass
@@ -176,6 +206,7 @@ class ExperimentConfig:
     length_sweep: LengthSweepConfig = field(default_factory=LengthSweepConfig)
     background: BackgroundExpConfig = field(default_factory=BackgroundExpConfig)
     sweep: SweepConfig = field(default_factory=SweepConfig)
+    popularity: PopularityConfig = field(default_factory=PopularityConfig)
 
     # Paths (relative entries are resolved against the repo root).
     data_dir: str = "data"

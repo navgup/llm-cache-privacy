@@ -51,11 +51,38 @@ class PromptSource:
 
 def inject(client: ProbeClient, source: PromptSource, n: int) -> None:
     """Synchronously send ``n`` fresh background prompts (cache-pressure injection)."""
-    for text in source.next_batch(n):
+    inject_texts(client, source.next_batch(n))
+
+
+def inject_texts(client: ProbeClient, texts: list[str]) -> None:
+    """Synchronously send a specific list of texts (order = access schedule)."""
+    for text in texts:
         try:
             client.ttft(text)  # the prefill caches the prompt; we ignore timing
         except Exception:
             pass
+
+
+def inject_skewed(
+    client: ProbeClient,
+    cold: PromptSource,
+    hot_pool: list[str],
+    n: int,
+    p_hot: float,
+    rng,
+) -> None:
+    """Inject ``n`` prompts with a popularity skew: each is drawn from the small
+    recurring ``hot_pool`` with probability ``p_hot`` (so hot prefixes accrue
+    frequency >1), else a fresh distinct cold prompt (frequency 1). This is what
+    lets LFU distinguish popular from rare content — the main sweep's all-distinct
+    background gives every entry frequency 1, collapsing LFU onto LRU."""
+    texts = []
+    for _ in range(n):
+        if hot_pool and rng.random() < p_hot:
+            texts.append(hot_pool[rng.randrange(len(hot_pool))])
+        else:
+            texts.append(cold.next_batch(1)[0])
+    inject_texts(client, texts)
 
 
 @dataclass
