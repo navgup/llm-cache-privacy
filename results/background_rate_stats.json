@@ -1,0 +1,23 @@
+[
+  {
+    "rate": 0.5,
+    "bg_sent": 9,
+    "duration_s": 39.04573655128479,
+    "achieved_bg_req_per_s": 0.2304989172935414,
+    "probes_skipped": 0
+  },
+  {
+    "rate": 1.0,
+    "bg_sent": 24,
+    "duration_s": 39.77503561973572,
+    "achieved_bg_req_per_s": 0.6033935514087031,
+    "probes_skipped": 0
+  },
+  {
+    "rate": 2.0,
+    "bg_sent": 50,
+    "duration_s": 41.39658522605896,
+    "achieved_bg_req_per_s": 1.2078290933167413,
+    "probes_skipped": 0
+  }
+]

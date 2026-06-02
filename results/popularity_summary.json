@@ -1,0 +1,110 @@
+{
+  "evict": {
+    "lfu": {
+      "curve": [
+        {
+          "volume": 0,
+          "hit_rate": 1.0,
+          "n": 2
+        },
+        {
+          "volume": 32,
+          "hit_rate": 1.0,
+          "n": 2
+        },
+        {
+          "volume": 128,
+          "hit_rate": 0.0,
+          "n": 2
+        }
+      ],
+      "attack_window_prompts": 80.0
+    },
+    "lru": {
+      "curve": [
+        {
+          "volume": 0,
+          "hit_rate": 1.0,
+          "n": 2
+        },
+        {
+          "volume": 32,
+          "hit_rate": 1.0,
+          "n": 2
+        },
+        {
+          "volume": 128,
+          "hit_rate": 0.0,
+          "n": 2
+        }
+      ],
+      "attack_window_prompts": 80.0
+    }
+  },
+  "oracle": {
+    "lfu": [
+      {
+        "freq": 1,
+        "p_cached": 0.0,
+        "n": 1
+      },
+      {
+        "freq": 2,
+        "p_cached": 0.0,
+        "n": 1
+      },
+      {
+        "freq": 4,
+        "p_cached": 1.0,
+        "n": 1
+      },
+      {
+        "freq": 8,
+        "p_cached": 0.0,
+        "n": 1
+      },
+      {
+        "freq": 16,
+        "p_cached": 0.0,
+        "n": 1
+      },
+      {
+        "freq": 32,
+        "p_cached": 0.0,
+        "n": 1
+      }
+    ],
+    "lru": [
+      {
+        "freq": 1,
+        "p_cached": 0.0,
+        "n": 1
+      },
+      {
+        "freq": 2,
+        "p_cached": 0.0,
+        "n": 1
+      },
+      {
+        "freq": 4,
+        "p_cached": 1.0,
+        "n": 1
+      },
+      {
+        "freq": 8,
+        "p_cached": 0.0,
+        "n": 1
+      },
+      {
+        "freq": 16,
+        "p_cached": 0.0,
+        "n": 1
+      },
+      {
+        "freq": 32,
+        "p_cached": 0.0,
+        "n": 1
+      }
+    ]
+  }
+}

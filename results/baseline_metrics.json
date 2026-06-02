@@ -1,0 +1,63 @@
+{
+  "direction": "hit_slower",
+  "calibration_threshold_ms": 121.7978919999041,
+  "n_calib_measurements": 200,
+  "n_eval_measurements": 800,
+  "overall": {
+    "n_hit": 400,
+    "n_miss": 400,
+    "auc": 1.0,
+    "precision_at_recall": 1.0,
+    "target_recall": 0.8,
+    "bits_leaked": 0.9361972147099128,
+    "threshold_ms": 121.7978919999041,
+    "direction": "hit_slower",
+    "ttft_hit_median_ms": 122.66835250011354,
+    "ttft_miss_median_ms": 77.92302699999709,
+    "delta_median_ms": -44.74532550011645
+  },
+  "by_bucket": {
+    "long": {
+      "n_hit": 133,
+      "n_miss": 133,
+      "auc": 1.0,
+      "precision_at_recall": 1.0,
+      "target_recall": 0.8,
+      "bits_leaked": 1.0000000000000002,
+      "threshold_ms": 121.7978919999041,
+      "direction": "hit_slower",
+      "ttft_hit_median_ms": 123.41549799998575,
+      "ttft_miss_median_ms": 87.65828099990358,
+      "delta_median_ms": -35.757217000082164,
+      "separability_auc": 1.0
+    },
+    "medium": {
+      "n_hit": 132,
+      "n_miss": 132,
+      "auc": 1.0,
+      "precision_at_recall": 1.0,
+      "target_recall": 0.8,
+      "bits_leaked": 1.0000000000000002,
+      "threshold_ms": 121.7978919999041,
+      "direction": "hit_slower",
+      "ttft_hit_median_ms": 122.61707700008628,
+      "ttft_miss_median_ms": 77.92644450000807,
+      "delta_median_ms": -44.69063250007821,
+      "separability_auc": 1.0
+    },
+    "short": {
+      "n_hit": 135,
+      "n_miss": 135,
+      "auc": 1.0,
+      "precision_at_recall": 1.0,
+      "target_recall": 0.8,
+      "bits_leaked": 0.850953700320743,
+      "threshold_ms": 121.7978919999041,
+      "direction": "hit_slower",
+      "ttft_hit_median_ms": 122.19326300009925,
+      "ttft_miss_median_ms": 74.89558900010707,
+      "delta_median_ms": -47.297673999992185,
+      "separability_auc": 1.0
+    }
+  }
+}

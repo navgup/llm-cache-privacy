@@ -1,0 +1,187 @@
+{
+  "lfu@4096tok": {
+    "policy": "lfu",
+    "max_total_tokens": 4096,
+    "server_max_total_num_tokens": 4096,
+    "sweeps": [
+      "eviction_policy"
+    ],
+    "curve": [
+      {
+        "volume": 0,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 4,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 8,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 16,
+        "hit_rate": 0.16666666666666666,
+        "n": 6
+      },
+      {
+        "volume": 32,
+        "hit_rate": 0.0,
+        "n": 6
+      },
+      {
+        "volume": 64,
+        "hit_rate": 0.0,
+        "n": 6
+      },
+      {
+        "volume": 128,
+        "hit_rate": 0.0,
+        "n": 6
+      }
+    ],
+    "attack_window_prompts": 12.8
+  },
+  "lru@2048tok": {
+    "policy": "lru",
+    "max_total_tokens": 2048,
+    "server_max_total_num_tokens": 2048,
+    "sweeps": [
+      "cache_size"
+    ],
+    "curve": [
+      {
+        "volume": 0,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 4,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 8,
+        "hit_rate": 0.3333333333333333,
+        "n": 6
+      },
+      {
+        "volume": 16,
+        "hit_rate": 0.0,
+        "n": 6
+      },
+      {
+        "volume": 32,
+        "hit_rate": 0.0,
+        "n": 6
+      },
+      {
+        "volume": 64,
+        "hit_rate": 0.0,
+        "n": 6
+      },
+      {
+        "volume": 128,
+        "hit_rate": 0.0,
+        "n": 6
+      }
+    ],
+    "attack_window_prompts": 7.0
+  },
+  "lru@4096tok": {
+    "policy": "lru",
+    "max_total_tokens": 4096,
+    "server_max_total_num_tokens": 4096,
+    "sweeps": [
+      "cache_size",
+      "eviction_policy"
+    ],
+    "curve": [
+      {
+        "volume": 0,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 4,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 8,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 16,
+        "hit_rate": 0.16666666666666666,
+        "n": 6
+      },
+      {
+        "volume": 32,
+        "hit_rate": 0.0,
+        "n": 6
+      },
+      {
+        "volume": 64,
+        "hit_rate": 0.0,
+        "n": 6
+      },
+      {
+        "volume": 128,
+        "hit_rate": 0.0,
+        "n": 6
+      }
+    ],
+    "attack_window_prompts": 12.8
+  },
+  "lru@8192tok": {
+    "policy": "lru",
+    "max_total_tokens": 8192,
+    "server_max_total_num_tokens": 8192,
+    "sweeps": [
+      "cache_size"
+    ],
+    "curve": [
+      {
+        "volume": 0,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 4,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 8,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 16,
+        "hit_rate": 1.0,
+        "n": 6
+      },
+      {
+        "volume": 32,
+        "hit_rate": 0.5,
+        "n": 6
+      },
+      {
+        "volume": 64,
+        "hit_rate": 0.0,
+        "n": 6
+      },
+      {
+        "volume": 128,
+        "hit_rate": 0.0,
+        "n": 6
+      }
+    ],
+    "attack_window_prompts": 32.0
+  }
+}
